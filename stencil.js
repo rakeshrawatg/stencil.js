@@ -11,7 +11,7 @@ Stencil = (function(){
 	}
 
 	function getBlocks(template) {
-		var regex = /^\{\{([#\^]{1}([^\}])+)\}\}/,
+		var regex = /^\{\{([#\^]{1}([^\}]+))\}\}/,
 			regexBlock,
 			match,
 			matchBlock,
@@ -135,11 +135,11 @@ Stencil = (function(){
 		if (match) {
 			blocks = getBlocks(match[0]);
 			html = blocks.map(function(item){
-				var propertyType = getPropertyType(json[item.key]);
+				var propertyValue = getValueOf(item.key, json),
+					propertyType = getPropertyType(propertyValue);
 
 				if (item.tag.charAt(0) === '^') {
 					if (!json[item.key]) {
-						debugger;
 						return render(item.block, json);
 					}						
 				} else {
@@ -149,7 +149,7 @@ Stencil = (function(){
 						return renderWithArray(item.block, json[item.key]);
 					} else {
 
-						if (json[item.key]) {
+						if (propertyValue) {
 							return render(item.block, json);
 						}
 
@@ -165,7 +165,6 @@ Stencil = (function(){
 		while (regexIdentifier.test(template)) {
 			identifierMatches = template.match(regexIdentifier);
 			template = template.replace(new RegExp('\{\{' + identifierMatches[1] + '\}\}'), getValueOf(identifierMatches[1], json));
-			break;
 		}
 
 		return template;
