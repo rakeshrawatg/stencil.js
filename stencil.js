@@ -26,9 +26,7 @@ Stencil = (function(){
 				break;
 			}
 
-			regexBlock 
-				= new RegExp('^\{\{\\' + match[1] + '\}\}.*\{\{\/' + match[2] + '\}\}');
-	
+			regexBlock = new RegExp('^\{\{\\' + match[1] + '\}\}.*?\{\{\/' + match[2] + '\}\}');
 			matchBlock = template.match(regexBlock);
 			template = trim(template.replace(matchBlock[0], ''));
 			matchBlock[0] = trim(matchBlock[0]
