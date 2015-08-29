@@ -116,9 +116,47 @@ Stencil = (function(){
 		return selector.length ? new RegExp(selector.join('.*?')) : null;
 	}
 
-	function getContext(template, json) {
+	function getContext(key, obj) {
+		/*
 		var regex = /\{\{.{1}([^\}]+)\}\}/;
 		return getValueOf(template.match(regex)[1], json);
+		*/
+		var valueOf,
+			arr;
+
+		if (obj[key]) {
+			if (getPropertyType(obj[key]) === PROPERTY_TYPE.PRIMITIVE) {
+				return obj;
+			}
+			
+			return obj[key];
+		}
+
+		// need to chk scenario
+		if (key === ".") {
+			return obj;
+		}
+
+		if (key.indexOf(".") > -1) {
+			arr = key.split('.');
+
+			for (var i=0, n=arr.length; i<n; i++) {
+
+				if (obj[arr[i]] && getPropertyType(obj[key]) !== PROPERTY_TYPE.PRIMITIVE) {
+					obj = obj[arr[i]];
+					continue;
+				}
+
+				return null;
+			}
+
+			return obj;
+		}
+	}
+
+	function getRootTagKey(template) {
+		var regex = /\{\{.{1}([^\}]+)\}\}/;
+		return template.match(regex)[1];
 	}
 
 	function getChildTemplate (template) {
@@ -129,25 +167,29 @@ Stencil = (function(){
 		var blockRegex,
 			match,
 			context,
+			contextValue,
+			contextType,
 			content;
 
 		// while there are any block in template
 		while (blockRegex = getBlockSelector(template)) {
 			match = template.match(blockRegex);
-			context = getContext(match[0], json);
+			contextValue = getValueOf(getRootTagKey(match[0]), json);
+			contextType = getPropertyType(contextValue);
+			context = getContext(getRootTagKey(match[0]), json);
 
 			switch (match[0].charAt(2)) {
 				case '^':
-					content = !(context) ? parse(getChildTemplate(match[0]), context) : '';
+					content = !(getValueOf(getRootTagKey(match[0]), json)) ? parse(getChildTemplate(match[0]), context) : '';
 					break;
 
 				case '#':
-					if (getPropertyType(context) === PROPERTY_TYPE.ARRAY) {
+					if (contextType === PROPERTY_TYPE.ARRAY) {
 						content = parseWithArray(getChildTemplate(match[0]), context);
-					} else if (getPropertyType(context) === PROPERTY_TYPE.OBJECT) {
+					} else if (contextType === PROPERTY_TYPE.OBJECT) {
 						content = parse(getChildTemplate(match[0]), context);
 					} else {					
-						content = context ? parse(getChildTemplate(match[0]), context) : '';
+						content = (getValueOf(getRootTagKey(match[0]), json))  ? parse(getChildTemplate(match[0]), context) : '';
 					}
 
 					break;
