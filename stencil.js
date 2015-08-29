@@ -6,8 +6,31 @@ Stencil = (function(){
 		PRIMITIVE: 'PRIMITIVE'
 	};
 
+	function parseWithKeys(template, json) {
+		var regex = /\{\{([^\}]+)\}\}/,
+			match,
+			value;
+
+		while (regex.test(template)) {
+			match = template.match(regex);
+			value = getValueOf(match[1], json);
+			template = template.replace(match[0], value);
+		}
+
+		return template;
+	}
+
+	function parseWithArray(template, context) {
+		var content = context.map(function(context) {
+			return parse(template, context);
+		});
+
+		return content.join('');
+	}
+
+
 	function trim(str) {
-		return str.replace(/^\s+|\s+$/g, '').replace(/[\n]+/g, '');
+		return str.replace(/[\r\n]+/g, '');
 	}
 
 	function getBlocks(template) {
@@ -119,53 +142,91 @@ Stencil = (function(){
 		return arr.join('');
 	}
 
-	function render(template, json) {
-		var regex = /\{\{[#\^]{1}[^\}]+\}\}.*\{\{\/[^\}]+\}\}/g,
-			regexIdentifier = /\{\{([^\}]+)\}\}/,
-			identifierMatches = [],
-			match = null,
-			blocks = [],
-			html;
+	function getBlockSelector (template) {
+		var regex = /\{\{[#\^\/][^\}]+\}\}/g,
+			match = template.match(regex),
+			selector = [],
+			count = 0,
+			tag,
+			charAt2;
 
-		template = trim(template);
-		match = template.match(regex);
+		while (match && match.length) {
+			tag = match.shift();
+			charAt2 = tag.charAt(2);
 
-		if (match) {
-			blocks = getBlocks(match[0]);
-			html = blocks.map(function(item){
-				var propertyValue = getValueOf(item.key, json),
-					propertyType = getPropertyType(propertyValue);
+			switch (charAt2) {
+				case '/':
+					count--;
+					selector.push('\{\{\\/' + tag.match(/\{\{([^\}]+)\}\}/)[1].substr(1) + '\}\}');
+					break;
+				case '#':
+					count++	;
+					selector.push('\{\{#' + tag.match(/\{\{([^\}]+)\}\}/)[1].substr(1) + '\}\}');
+					break;
+				case '^':
+					count++	;
+					selector.push('\{\{\\^' + tag.match(/\{\{([^\}]+)\}\}/)[1].substr(1) + '\}\}');
+					break;
+			}
 
-				if (item.tag.charAt(0) === '^') {
-					if (!json[item.key]) {
-						return render(item.block, json);
-					}						
-				} else {
-					if (propertyType === PROPERTY_TYPE.OBJECT) {
-						return render(item.block, json[item.key]);
-					} else if (propertyType === PROPERTY_TYPE.ARRAY) {
-						return renderWithArray(item.block, json[item.key]);
-					} else {
 
-						if (propertyValue) {
-							return render(item.block, json);
-						}
+			// 
+			if (count === 0) {
+				break;
+			}
+		}
 
-						return '';
+		return selector.length ? new RegExp(selector.join('.*?')) : null;
+	}
+
+	function getContext(template, json) {
+		var regex = /\{\{.{1}([^\}]+)\}\}/;
+		return getValueOf(template.match(regex)[1], json);
+	}
+
+	function getChildTemplate (template) {
+		return template.replace(/^\{\{[^\}]+\}\}/, '').replace(/\{\{[^\}]+\}\}$/, '');
+	}
+
+	function parse(template, json) {
+		var blockRegex,
+			match,
+			context,
+			content;
+
+		// while there are any block in template
+		while (blockRegex = getBlockSelector(template)) {
+			match = template.match(blockRegex);
+			context = getContext(match[0], json);
+
+			switch (match[0].charAt(2)) {
+				case '^':
+					content = !(context) ? parse(getChildTemplate(match[0]), context) : '';
+					break;
+
+				case '#':
+					if (getPropertyType(context) === PROPERTY_TYPE.ARRAY) {
+						content = parseWithArray(getChildTemplate(match[0]), context);
+					} else if (getPropertyType(context) === PROPERTY_TYPE.OBJECT) {
+						content = parse(getChildTemplate(match[0]), context);
+					} else {					
+						content = context ? parse(getChildTemplate(match[0]), context) : '';
 					}
-				}
-			});
 
-			template = template.replace(match[0], html.join(''));
+					break;
+			}
+
+			template = template.replace(match[0], content);
 		}
 
-		//
-		while (regexIdentifier.test(template)) {
-			identifierMatches = template.match(regexIdentifier);
-			template = template.replace(new RegExp('\{\{' + identifierMatches[1] + '\}\}'), getValueOf(identifierMatches[1], json));
-		}
 
-		return template;
+
+		return parseWithKeys(template, json);
+
+	}
+
+	function render (template, json) {
+		return parse(trim(template), json);
 	}
 
 	return {
