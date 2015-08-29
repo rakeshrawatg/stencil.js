@@ -33,40 +33,6 @@ Stencil = (function(){
 		return str.replace(/[\r\n]+/g, '');
 	}
 
-	function getBlocks(template) {
-		var regex = /^\{\{([#\^]{1}([^\}]+))\}\}/,
-			regexBlock,
-			match,
-			matchBlock,
-			blocks = [];
-
-		while (true) {
-			template = trim(template);
-			match = template.match(regex);
-
-			// break if match not found
-			if (!match) {
-				break;
-			}
-
-			regexBlock = new RegExp('^\{\{\\' + match[1] + '\}\}.*?\{\{\/' + match[2] + '\}\}');
-			matchBlock = template.match(regexBlock);
-			template = trim(template.replace(matchBlock[0], ''));
-			matchBlock[0] = trim(matchBlock[0]
-							.replace(/^\{\{[^\}]+\}\}/, '')
-							.replace(/\{\{[^\}]+\}\}$/, ''));
-
-			blocks.push({
-				block: matchBlock[0],
-				tag: match[1],
-				key: match[2]
-			});
-			
-		}
-
-		return blocks;
-	}
-
 	function getPropertyType(value) {
 		var type;
 
@@ -84,27 +50,6 @@ Stencil = (function(){
 		}
 
 		return null;
-	}
-
-	function renderWithArray(template, json) {
-		var arr = json.map(function(value) {
-			var propertyType = getPropertyType(value);
-
-			switch (propertyType) {
-				case PROPERTY_TYPE.OBJECT:
-					return render(template, value)
-					break;
-				case PROPERTY_TYPE.ARRAY:
-					return renderWithArray(template, value);
-					break;
-				case PROPERTY_TYPE.PRIMITIVE:
-					return render(template, value);
-					break;					
-			}
-
-		});
-
-		return arr.join('');
 	}
 
 	function getValueOf(key, obj) {
@@ -132,14 +77,6 @@ Stencil = (function(){
 
 			return obj;
 		}
-	}
-
-	function getBlocksContent (blocks) {
-		var arr = blocks.map(function(item) {
-			return item.block;
-		});
-
-		return arr.join('');
 	}
 
 	function getBlockSelector (template) {
