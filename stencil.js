@@ -189,7 +189,7 @@ Stencil = (function(){
 					} else if (contextType === PROPERTY_TYPE.OBJECT) {
 						content = parse(getChildTemplate(match[0]), context);
 					} else {					
-						content = (getValueOf(getRootTagKey(match[0]), json))  ? parse(getChildTemplate(match[0]), context) : '';
+						content = (getValueOf(getRootTagKey(match[0]), json))  ? parse(getChildTemplate(match[0]), json) : '';
 					}
 
 					break;
