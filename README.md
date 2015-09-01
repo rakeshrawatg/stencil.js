@@ -56,8 +56,10 @@ Output:
 ```
 Code:
 Stencil.render('{{#user}}<p>Name: {{name}}</p><p>Value: {{value}}</p>{{/user}}', {
+user: {
   name: 'foo', 
   value: 'bar'
+}
 });
 
 Output:
